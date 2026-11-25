@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1420">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Onde, musique en ligne</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;--bg:#EEF1F8;--surface:#fff;--ink:#141A2B;--muted:#5E667D;--accent:#3355FF;--on-accent:#fff;--line:#D9DEEB}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1420;--surface:#181F31;--ink:#EDF0FA;--muted:#98A1BC;--accent:#8196FF;--on-accent:#0F1420;--line:#27304A}}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 12px}
+h1{font-size:2rem;font-weight:800;letter-spacing:-.02em;margin-bottom:10px}
+input[type=search]{width:100%;padding:12px 16px;font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:14px}
+input[type=search]:focus-visible,button:focus-visible,#seek:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding:4px 0 calc(150px + env(safe-area-inset-bottom,0px))}
+h2{font-size:1.1rem;font-weight:600;padding:8px 16px}
+#s{padding:0 16px 8px;color:var(--muted);font-size:.95rem}
+.row{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;width:100%;padding:8px 16px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.row[aria-current=true]{background:var(--surface)}
+.row[aria-current=true] b{color:var(--accent)}
+.row img{width:52px;height:52px;border-radius:8px;object-fit:cover;background:var(--line)}
+.meta{display:grid;min-width:0}
+.meta b,.meta small,.info b,.info span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta b{font-weight:600}
+.meta small,.row time,.info span,.info small{color:var(--muted);font-size:.85rem}
+.credit{padding:20px 16px;color:var(--muted);font-size:.8rem}
+.player{position:fixed;left:0;right:0;bottom:0;z-index:10;display:grid;grid-template-columns:56px 1fr auto;gap:4px 12px;align-items:center;background:var(--surface);border-top:1px solid var(--line);padding:6px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+.player[hidden]{display:none}
+#seek{grid-column:1/-1;width:100%;accent-color:var(--accent);height:20px}
+.disc{position:relative;width:56px;height:56px}
+.disc img{width:100%;height:100%;border-radius:50%;object-fit:cover;animation:spin 8s linear infinite;animation-play-state:paused}
+.disc::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--surface)}
+.player.on .disc img{animation-play-state:running}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.disc img{animation:none}}
+.info{display:grid;min-width:0}
+.info b{font-weight:600}
+.ctl{display:flex;align-items:center;gap:4px}
+.ctl button{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:none;color:var(--ink);cursor:pointer}
+.ctl .main{background:var(--accent);color:var(--on-accent)}
+.ctl .pause{display:none}
+.player.on .play{display:none}
+.player.on .pause{display:block}
+</style>
+</head>
+<body>
+<header>
+  <h1>Onde</h1>
+  <form id="f" role="search"><input id="q" type="search" placeholder="Rechercher un titre ou un artiste" enterkeyhint="search" autocomplete="off" aria-label="Rechercher"></form>
+</header>
+<main>
+  <h2 id="h"></h2>
+  <p id="s" role="status" aria-live="polite"></p>
+  <div id="list"></div>
+  <p class="credit">Musique fournie par Audius. Les droits appartiennent aux artistes.</p>
+</main>
+<section id="p" class="player" hidden aria-label="Lecteur">
+  <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Position dans le titre">
+  <div class="disc"><img id="cover" alt=""></div>
+  <div class="info"><b id="pt"></b><span id="pa"></span><small id="tm">0:00</small></div>
+  <div class="ctl">
+    <button id="prev" aria-label="Titre précédent"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M6 6h2v12H6zM20 6v12L9.5 12z"/></svg></button>
+    <button id="pp" class="main" aria-label="Lecture ou pause">
+      <svg class="play" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+      <svg class="pause" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+    </button>
+    <button id="next" aria-label="Titre suivant"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M16 6h2v12h-2zM4 6l10.5 6L4 18z"/></svg></button>
+  </div>
+</section>
+<script>
+const APP='onde-pwa',HOSTS=['https://api.audius.co/v1','https://discoveryprovider.audius.co/v1'];
+const $=s=>document.querySelector(s),audio=new Audio();
+let host=HOSTS[0],tracks=[],queue=[],qi=-1,fails=0;
+const PH='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#8890a8"/></svg>');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>{n=Math.max(0,Math.floor(n||0));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0')};
+const art=(t,z='150x150')=>t.artwork?.[z]||t.artwork?.['480x480']||PH;
+const cur=()=>queue[qi]?.id;
+
+async function api(path){
+  const sep=path.includes('?')?'&':'?';
+  for(const h of HOSTS){
+    try{const r=await fetch(h+path+sep+'app_name='+APP);if(r.ok){host=h;return(await r.json()).data||[]}}catch(e){}
+  }
+  throw new Error('offline');
+}
+const row=(t,i)=>`<button class="row" data-i="${i}" data-id="${esc(t.id)}" aria-current="${t.id===cur()}"><img src="${esc(art(t))}" alt="" loading="lazy"><span class="meta"><b>${esc(t.title)}</b><small>${esc(t.user?.name)}</small></span><time>${fmt(t.duration)}</time></button>`;
+
+async function show(title,path,empty){
+  $('#h').textContent=title;$('#s').textContent='Chargement…';$('#list').innerHTML='';
+  try{tracks=await api(path)}catch(e){tracks=[];$('#s').textContent='Impossible de joindre Audius. Vérifie ta connexion et réessaie.';return}
+  $('#s').textContent=tracks.length?'':empty;
+  $('#list').innerHTML=tracks.map(row).join('');
+}
+function load(){
+  const t=queue[qi];if(!t)return;
+  audio.src=`${host}/tracks/${t.id}/stream?app_name=${APP}`;
+  audio.play().catch(()=>{});
+  $('#p').hidden=false;$('#pt').textContent=t.title;$('#pa').textContent=t.user?.name||'';$('#cover').src=art(t,'480x480');
+  document.querySelectorAll('.row').forEach(r=>r.setAttribute('aria-current',r.dataset.id===t.id));
+  if('mediaSession' in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.user?.name||'',artwork:[{src:art(t,'480x480'),sizes:'480x480'}]});
+}
+const next=()=>{if(!queue.length)return;qi=(qi+1)%queue.length;load()};
+const prev=()=>{if(!queue.length)return;if(audio.currentTime>3){audio.currentTime=0;return}qi=(qi-1+queue.length)%queue.length;load()};
+const toggle=()=>audio.paused?audio.play():audio.pause();
+
+$('#list').addEventListener('click',e=>{const b=e.target.closest('.row');if(!b)return;queue=tracks;qi=+b.dataset.i;load()});
+$('#pp').onclick=toggle;$('#next').onclick=next;$('#prev').onclick=prev;
+$('#seek').oninput=e=>{const d=audio.duration||queue[qi]?.duration;if(d)audio.currentTime=e.target.value/1000*d};
+audio.onplay=()=>$('#p').classList.add('on');
+audio.onpause=()=>$('#p').classList.remove('on');
+audio.onplaying=()=>{fails=0;$('#s').textContent=''};
+audio.onended=next;
+audio.onerror=()=>{
+  if(++fails>3){$('#s').textContent='Lecture impossible. Vérifie ta connexion.';return}
+  $('#s').textContent='Ce titre n’est pas disponible, passage au suivant.';setTimeout(next,1200);
+};
+audio.ontimeupdate=()=>{
+  const d=audio.duration||queue[qi]?.duration||0;
+  $('#seek').value=d?audio.currentTime/d*1000:0;
+  $('#tm').textContent=fmt(audio.currentTime)+' / '+fmt(d);
+};
+if('mediaSession' in navigator){
+  const m=navigator.mediaSession;
+  m.setActionHandler('play',()=>audio.play());m.setActionHandler('pause',()=>audio.pause());
+  m.setActionHandler('previoustrack',prev);m.setActionHandler('nexttrack',next);
+}
+$('#f').addEventListener('submit',e=>{
+  e.preventDefault();const q=$('#q').value.trim();$('#q').blur();
+  if(!q)return show('Tendances du moment','/tracks/trending?limit=30','Aucun titre à afficher.');
+  show(`Résultats pour « ${q} »`,`/tracks/search?query=${encodeURIComponent(q)}&limit=30`,`Aucun résultat pour « ${q} ».`);
+});
+show('Tendances du moment','/tracks/trending?limit=30','Aucun titre à afficher.');
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
